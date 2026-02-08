@@ -12,32 +12,49 @@ class LabelGradeHandler(Handler):
 
         def get_grade(row) -> str:
             # Normalize strings
-            title = str(row.get('job_title', '')).lower()
-            # If job_title column doesn't exist (it was dropped or named differently), try to find it
-            # In our pipeline 'Ищет работу на должность:' was mapped to 'job' (top 133) or 'other'.
-            # We might need the raw title for better labeling.
-            # But the 'ParseJobHandler' drops the original column. 
-            # We should probably insert this handler BEFORE ParseJobHandler drops the column, 
-            # or rely on 'experience_months'.
-            
-            # Wait, the current pipeline drops 'Ищет работу на должность:'.
-            # We need to ensure we have access to the original title or experience.
-            # 'experience_months' is created by ParseExperienceHandler.
-            
+            title = str(row.get('job_title_temp', '')).lower()
             exp_months = row.get('experience_months', 0)
             
-            # Heuristic rules
-            if 'junior' in title or 'trainee' in title or 'stager' in title or 'младший' in title:
+            # Keywords for specific grades
+            junior_keywords = ['junior', 'trainee', 'stager', 'intern', 'младший', 'стажер', 'начальный', 'assistant', 'ассистент']
+            senior_keywords = ['senior', 'lead', 'principal', 'ведущий', 'главный', 'руководитель', 'head', 'architect', 'expert', 'эксперт', 'mentor']
+            middle_keywords = ['middle', 'мидл'] # Less common in titles, usually implied by absence of Junior/Senior
+            
+            # 1. Check title for explicit grade
+            is_junior = any(k in title for k in junior_keywords)
+            is_senior = any(k in title for k in senior_keywords)
+            is_middle = any(k in title for k in middle_keywords)
+            
+            # Conflict resolution: if both (e.g. "Senior Assistant"), trust Senior if exp is high, else Junior
+            if is_senior and is_junior:
+                if exp_months > 36:
+                    return 'Senior'
+                else:
+                    return 'Junior'
+            
+            if is_senior:
+                return 'Senior'
+            if is_junior:
                 return 'Junior'
-            if 'senior' in title or 'lead' in title or 'principal' in title or 'ведущий' in title:
+            if is_middle:
+                return 'Middle'
+
+            # 2. Experience based fallback (adjusted thresholds)
+            # < 1.5 years (18 months) -> Junior
+            # 1.5 - 3 years (18 - 36 months) -> Junior+ / Middle- (let's map to Middle for now to balance classes, or keep Junior strict)
+            # Let's relax Junior threshold slightly to capture "strong juniors"
+            
+            if exp_months <= 12: # Strictly Junior
+                return 'Junior'
+            elif exp_months <= 24: # 1-2 years
+                # Often considered Junior, but could be Middle in some stacks. 
+                # Let's keep it Junior to avoid polluting Middle class with beginners.
+                return 'Junior'
+                
+            elif exp_months > 60: # > 5 years -> Senior
                 return 'Senior'
             
-            # Experience based fallback
-            if exp_months < 18: # < 1.5 years
-                return 'Junior'
-            if exp_months > 60: # > 5 years
-                return 'Senior'
-                
+            # Everything else (2 - 5 years) -> Middle
             return 'Middle'
 
         # We need to check if we have the necessary columns.
