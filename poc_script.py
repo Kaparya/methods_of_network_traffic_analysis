@@ -1,19 +1,19 @@
-import sys
+from __future__ import annotations
+
 import logging
+import sys
 import traceback
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
-from sklearn.ensemble import RandomForestClassifier
 from catboost import CatBoostClassifier
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-from src.core import PipelineContext, Handler
+from src.core import PipelineContext
 from src.handlers.filtering import FilterITRolesHandler
 from src.handlers.io import LoadCSVHandler
 from src.handlers.labeling import LabelGradeHandler
@@ -24,8 +24,6 @@ from src.handlers.parsing import (
     ParseEmploymentHandler,
     ParseExperienceHandler,
     ParseGenderAgeBirthdayHandler,
-    ParseJobHandler,
-    ParseLastJobHandler,
     ParseLastPlaceHandler,
     ParseResumeHandler,
     ParseSalaryHandler,
@@ -38,128 +36,199 @@ from src.handlers.preprocessing import (
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-def main():
-    input_path = Path("parsing/hh.csv")
-    if not input_path.exists():
-        input_path = Path("../parsing/hh.csv")
-        if not input_path.exists():
-            input_path = Path("hh.csv")
-            
-    if not input_path.exists():
-        print("Error: hh.csv not found.")
-        sys.exit(1)
+OUTPUT_DIR = Path(".")
 
-    pipeline = LoadCSVHandler()
-    
-    pipeline.set_next(FilterITRolesHandler())\
-            .set_next(ParseGenderAgeBirthdayHandler())\
-            .set_next(ParseSalaryHandler())\
-            .set_next(ParseExperienceHandler())\
-            .set_next(LabelGradeHandler())\
-            .set_next(ParseJobHandler())\
-            .set_next(ParseCityHandler())\
-            .set_next(ParseEmploymentHandler())\
-            .set_next(ParseWorkScheduleHandler())\
-            .set_next(ParseLastPlaceHandler())\
-            .set_next(ParseLastJobHandler())\
-            .set_next(ParseEducationHandler())\
-            .set_next(ParseResumeHandler())\
-            .set_next(ParseAutoHandler())\
-            .set_next(EncodeCategoricalFeaturesHandler())\
-            .set_next(SplitClassificationDataHandler())
 
-    print("Starting pipeline execution...")
-    ctx = PipelineContext(csv_path=input_path)
+def _resolve_csv() -> Path:
+    """
+    Find hh.csv in several common locations.
+
+    Returns:
+        Path: Path to the existing hh.csv file.
+
+    Raises:
+        SystemExit: If file is not found.
+    """
+    candidates = [
+        Path("parsing/hh.csv"),
+        Path("../parsing/hh.csv"),
+        Path("hh.csv"),
+    ]
+    for candidate_path in candidates:
+        if candidate_path.exists():
+            return candidate_path
+    print("Error: hh.csv not found.")
+    sys.exit(1)
+
+
+def _build_pipeline():
+    """
+    Build the data-processing pipeline for classification.
+
+    The pipeline follows a specific order:
+    1. Filter IT roles (optimization).
+    2. Parse raw features (age, salary, experience) needed for labeling.
+    3. Label grades and remove source columns (zero leakage).
+    4. Parse remaining features (city, schedule, etc.).
+    5. Encode categorical features.
+    6. Split into features and target.
+
+    Returns:
+        Handler: The head of the processing chain.
+    """
+    head = LoadCSVHandler()
+    head.set_next(FilterITRolesHandler()) \
+        .set_next(ParseGenderAgeBirthdayHandler()) \
+        .set_next(ParseSalaryHandler()) \
+        .set_next(ParseExperienceHandler()) \
+        .set_next(LabelGradeHandler()) \
+        .set_next(ParseCityHandler()) \
+        .set_next(ParseEmploymentHandler()) \
+        .set_next(ParseWorkScheduleHandler()) \
+        .set_next(ParseLastPlaceHandler()) \
+        .set_next(ParseEducationHandler()) \
+        .set_next(ParseResumeHandler()) \
+        .set_next(ParseAutoHandler()) \
+        .set_next(EncodeCategoricalFeaturesHandler()) \
+        .set_next(SplitClassificationDataHandler())
+    return head
+
+
+def _plot_class_balance(labels: np.ndarray, path: Path) -> None:
+    """
+    Save a bar-chart of class distribution.
+
+    Args:
+        labels: Array of target labels.
+        path: Output path for the image file.
+    """
+    unique, counts = np.unique(labels, return_counts=True)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    bars = ax.bar(unique, counts, color=['#4CAF50', '#2196F3', '#FF9800'])
+    ax.set_title("Distribution of Developer Grades (IT resumes from hh.ru)")
+    ax.set_xlabel("Grade")
+    ax.set_ylabel("Number of resumes")
+
+    for bar, count in zip(bars, counts):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2, bar.get_height() + 50,
+            str(count), ha='center', va='bottom', fontweight='bold',
+        )
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    print(f"Saved class balance plot -> {path}")
+
+
+def _print_and_save_report(
+    y_test,
+    y_pred,
+    class_names,
+    feature_names,
+    importances,
+    path: Path,
+) -> None:
+    """
+    Print classification report and top features; save to file.
+
+    Args:
+        y_test: True labels.
+        y_pred: Predicted labels.
+        class_names: List of class names.
+        feature_names: List of feature names.
+        importances: Array of feature importance scores.
+        path: Output path for the report text file.
+    """
+    report = classification_report(y_test, y_pred, target_names=class_names)
+    print("\n" + "=" * 60)
+    print("Classification Report")
+    print("=" * 60)
+    print(report)
+
+    top_n = min(15, len(feature_names))
+    order = np.argsort(importances)[::-1]
+
+    print(f"Top {top_n} Important Features:")
+    for i in range(top_n):
+        idx = order[i]
+        print(f"  {i + 1:>2}. {feature_names[idx]:<40s} {importances[idx]:.4f}")
+
+    with open(path, "w", encoding="utf-8") as fout:
+        fout.write("Classification Report\n")
+        fout.write("=" * 60 + "\n\n")
+        fout.write(report)
+        fout.write(f"\n\nTop {top_n} Features:\n")
+        for i in range(top_n):
+            idx = order[i]
+            fout.write(f"{feature_names[idx]}: {importances[idx]:.4f}\n")
+    print(f"\nSaved report -> {path}")
+
+
+def main() -> None:
+    """Main function to run the classification PoC."""
+    # 1. Run the data pipeline.
+    csv_path = _resolve_csv()
+    pipeline = _build_pipeline()
+
+    print(f"Starting pipeline (source: {csv_path}) ...")
+    ctx = PipelineContext(csv_path=csv_path)
     try:
         ctx = pipeline.handle(ctx)
-    except Exception as e:
-        logging.error(f"Pipeline failed: {e}")
+    except Exception as exc:
+        logging.error(f"Pipeline failed: {exc}")
         traceback.print_exc()
         sys.exit(1)
 
-    X = ctx.X
-    y = ctx.y
-    feature_names = getattr(ctx, 'feature_names', [f"feat_{i}" for i in range(X.shape[1])])
-    
-    print(f"Data ready. X shape: {X.shape}, y shape: {y.shape}")
-    
-    # 4. Analyze Class Balance
-    unique, counts = np.unique(y, return_counts=True)
+    features = ctx.features
+    target = ctx.target
+    feature_names: list[str] = getattr(
+        ctx, 'feature_names', [f"feat_{i}" for i in range(features.shape[1])]
+    )
+    print(f"\nData ready.  X shape: {features.shape},  y classes: {np.unique(target)}")
+
+    # 2. Class balance.
+    unique, counts = np.unique(target, return_counts=True)
     print("\nClass Balance:")
     for label, count in zip(unique, counts):
-        print(f"{label}: {count} ({count/len(y)*100:.2f}%)")
-        
-    # Plot balance
-    try:
-        plt.figure(figsize=(8, 6))
-        plt.bar(unique, counts)
-        plt.title("Distribution of Developer Grades")
-        plt.xlabel("Grade")
-        plt.ylabel("Count")
-        plt.savefig("grade_distribution.png")
-        print("Saved grade_distribution.png")
-    except Exception as e:
-        print(f"Failed to plot: {e}")
+        print(f"  {label}: {count:>6}  ({count / len(target) * 100:.1f}%)")
 
-    # 5. Encode Target
+    _plot_class_balance(target, OUTPUT_DIR / "grade_distribution.png")
+
+    # 3. Encode target labels.
     le = LabelEncoder()
-    y_encoded = le.fit_transform(y)
-    
-    # 6. Train/Test Split
-    # Reduce dataset size for PoC to prevent OOM
-    print(f"Original dataset size: {X.shape[0]}")
-    sample_size = min(50, X.shape[0])  # Extremely small sample
-    indices = np.random.choice(X.shape[0], sample_size, replace=False)
-    X_sample = X[indices]
-    y_encoded_sample = y_encoded[indices]
-    print(f"Sampled dataset size: {X_sample.shape[0]}")
-    
-    X_train, X_test, y_train, y_test = train_test_split(X_sample, y_encoded_sample, test_size=0.2, random_state=42, stratify=y_encoded_sample)
-    
-    # 7. Model Training
-    print("\nTraining CatBoost Classifier...")
+    y_enc = le.fit_transform(target)
+
+    # 4. Train / test split — use the FULL dataset.
+    X_train, X_test, y_train, y_test = train_test_split(
+        features, y_enc, test_size=0.2, random_state=42, stratify=y_enc,
+    )
+    print(f"\nTrain size: {X_train.shape[0]},  Test size: {X_test.shape[0]}")
+
+    # 5. Train CatBoost.
+    print("\nTraining CatBoost Classifier ...")
     clf = CatBoostClassifier(
-        iterations=10, 
-        learning_rate=0.1, 
-        depth=2, 
+        iterations=300,
+        learning_rate=0.1,
+        depth=6,
         loss_function='MultiClass',
+        auto_class_weights='Balanced',
         random_seed=42,
-        verbose=False,
+        verbose=50,
         allow_writing_files=False,
-        thread_count=1
+        thread_count=-1,
     )
     clf.fit(X_train, y_train)
-    
-    # 8. Evaluation
-    print("\nEvaluating model...")
-    y_pred = clf.predict(X_test)
-    
-    print("\nClassification Report:")
-    report = classification_report(y_test, y_pred, target_names=le.classes_)
-    print(report)
-    
-    # Feature Importance
-    try:
-        importances = clf.feature_importances_
-        indices = np.argsort(importances)[::-1]
-        
-        print("\nTop 10 Important Features:")
-        for feature_index in range(min(10, len(feature_names))):
-            print(f"{feature_index+1}. {feature_names[indices[feature_index]]}: {importances[indices[feature_index]]:.4f}")
-    except Exception as e:
-        print(f"Could not print feature importance: {e}")
 
-    # Save metrics to a file for review
-    with open("classification_report.txt", "w") as f:
-        f.write("Classification Report\n")
-        f.write("=====================\n\n")
-        f.write(report)
-        f.write("\n\nTop 10 Features:\n")
-        try:
-            for feature_index in range(min(10, len(feature_names))):
-                f.write(f"{feature_names[indices[feature_index]]}: {importances[indices[feature_index]]:.4f}\n")
-        except:
-            pass
+    # 6. Evaluate.
+    y_pred = clf.predict(X_test).flatten()
+    _print_and_save_report(
+        y_test, y_pred, le.classes_,
+        feature_names, clf.feature_importances_,
+        OUTPUT_DIR / "classification_report.txt",
+    )
+
 
 if __name__ == "__main__":
     main()

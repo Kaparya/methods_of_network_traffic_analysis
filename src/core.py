@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import logging
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,37 +19,40 @@ logging.basicConfig(
 
 @dataclass
 class PipelineContext:
-    """
-    Context for processing data pipeline.
-
-    Attributes:
-        csv_path: Path to the original CSV file.
-        df: dataframe with data (default None).
-        X: features (default None).
-        y: target (default None).
-    """
+    """Context for processing data pipeline."""
     csv_path: Path
     df: Optional[pd.DataFrame] = None
-    X: Optional[np.ndarray] = None
-    y: Optional[np.ndarray] = None
+    features: Optional[np.ndarray] = None
+    target: Optional[np.ndarray] = None
 
 class Handler(ABC):
-    """
-    Abstract handler for implementing a chain of responsibility.
-
-    Methods:
-        set_next(handler): Sets the next handler in the chain.
-        handle(ctx): Processes the data context and passes it to the next handler in the chain.
-        _process(ctx): Abstract method for specific processing, must be implemented in subclasses.
-    """
+    """Abstract handler for chain of responsibility pattern."""
     def __init__(self):
         self._next: Optional["Handler"] = None
 
     def set_next(self, handler: "Handler") -> "Handler":
+        """
+        Set the next handler in the chain.
+
+        Args:
+            handler: The next handler to be executed.
+
+        Returns:
+            Handler: The handler that was just set (for chaining).
+        """
         self._next = handler
         return handler
 
     def handle(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Handle the request and pass it to the next handler.
+
+        Args:
+            ctx: The data pipeline context.
+
+        Returns:
+            PipelineContext: The processed context.
+        """
         ctx = self._process(ctx)
         if self._next:
             return self._next.handle(ctx)
@@ -57,4 +60,13 @@ class Handler(ABC):
 
     @abstractmethod
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Process the context (abstract method).
+
+        Args:
+            ctx: The data pipeline context.
+
+        Returns:
+            PipelineContext: The processed context.
+        """
         ...
