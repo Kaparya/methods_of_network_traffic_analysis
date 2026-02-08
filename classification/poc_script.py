@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.ensemble import RandomForestClassifier
+from catboost import CatBoostClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -107,7 +108,7 @@ def main():
     # 6. Train/Test Split
     # Reduce dataset size for PoC to prevent OOM
     print(f"Original dataset size: {X.shape[0]}")
-    sample_size = min(100, X.shape[0])  # Extremely small sample
+    sample_size = min(50, X.shape[0])  # Extremely small sample
     indices = np.random.choice(X.shape[0], sample_size, replace=False)
     X_sample = X[indices]
     y_encoded_sample = y_encoded[indices]
@@ -116,8 +117,17 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X_sample, y_encoded_sample, test_size=0.2, random_state=42, stratify=y_encoded_sample)
     
     # 7. Model Training
-    print("\nTraining Random Forest Classifier (simplified for PoC)...")
-    clf = RandomForestClassifier(n_estimators=3, max_depth=2, random_state=42, n_jobs=1, class_weight='balanced')
+    print("\nTraining CatBoost Classifier...")
+    clf = CatBoostClassifier(
+        iterations=10, 
+        learning_rate=0.1, 
+        depth=2, 
+        loss_function='MultiClass',
+        random_seed=42,
+        verbose=False,
+        allow_writing_files=False,
+        thread_count=1
+    )
     clf.fit(X_train, y_train)
     
     # 8. Evaluation
@@ -129,12 +139,15 @@ def main():
     print(report)
     
     # Feature Importance
-    importances = clf.feature_importances_
-    indices = np.argsort(importances)[::-1]
-    
-    print("\nTop 10 Important Features:")
-    for feature_index in range(min(10, len(feature_names))):
-        print(f"{feature_index+1}. {feature_names[indices[feature_index]]}: {importances[indices[feature_index      ]]:.4f}")
+    try:
+        importances = clf.feature_importances_
+        indices = np.argsort(importances)[::-1]
+        
+        print("\nTop 10 Important Features:")
+        for feature_index in range(min(10, len(feature_names))):
+            print(f"{feature_index+1}. {feature_names[indices[feature_index]]}: {importances[indices[feature_index]]:.4f}")
+    except Exception as e:
+        print(f"Could not print feature importance: {e}")
 
     # Save metrics to a file for review
     with open("classification_report.txt", "w") as f:
@@ -142,8 +155,11 @@ def main():
         f.write("=====================\n\n")
         f.write(report)
         f.write("\n\nTop 10 Features:\n")
-        for feature_index in range(min(10, len(feature_names))):
-            f.write(f"{feature_names[indices[feature_index]]}: {importances[indices[feature_index]]:.4f}\n")
+        try:
+            for feature_index in range(min(10, len(feature_names))):
+                f.write(f"{feature_names[indices[feature_index]]}: {importances[indices[feature_index]]:.4f}\n")
+        except:
+            pass
 
 if __name__ == "__main__":
     main()
