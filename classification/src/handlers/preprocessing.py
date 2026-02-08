@@ -1,69 +1,74 @@
 import logging
+
 import pandas as pd
+
 from src.core import Handler, PipelineContext
 
 class EncodeCategoricalFeaturesHandler(Handler):
-    """
-    Handler for encoding categorical features.
-    """
+    """Handler for encoding categorical features."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"EncodeCategoricalFeaturesHandler: Start with {ctx.df.shape[1]} features")
+        """
+        One-hot encode categorical columns, excluding the target 'grade'.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context with encoded dataframe.
+        """
+        logging.info(f"EncodeCategoricalFeaturesHandler: Encoding categorical features")
         df = ctx.df.copy()
 
-        # We must NOT encode the target 'grade' if it's already created.
-        # But 'grade' is string (object), so get_dummies will convert it.
-        # We should exclude 'grade' from dummy encoding.
-        
-        target_col = 'grade'
+        # Exclude target 'grade' from encoding
         cat_cols = df.select_dtypes(include="object").columns.tolist()
-        
-        if target_col in cat_cols:
-            cat_cols.remove(target_col)
+        if 'grade' in cat_cols:
+            cat_cols.remove('grade')
             
         df = pd.get_dummies(df, columns=cat_cols, drop_first=True)
-
         ctx.df = df
-        logging.info(f"EncodeCategoricalFeaturesHandler: Updated df with {ctx.df.shape[1]} features")
+        logging.info(f"EncodeCategoricalFeaturesHandler: Done (features: {df.shape[1]})")
         return ctx
 
 class SplitDataHandler(Handler):
-    """
-    Handler for splitting the dataset into features and target.
-    """
+    """Handler for splitting data for regression (salary target)."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"SplitDataHandler: Splitting data into features and target")
-        df = ctx.df.copy()
+        """
+        Split dataframe into features and target (salary_rub).
 
-        ctx.X = df.drop(columns=["salary_rub"])
-        ctx.y = df["salary_rub"]
+        Args:
+            ctx: Pipeline context containing the dataframe.
 
+        Returns:
+            PipelineContext: Context with features and target populated.
+        """
+        logging.info("SplitDataHandler: Splitting X/y")
+        ctx.features = ctx.df.drop(columns=["salary_rub"])
+        ctx.target = ctx.df["salary_rub"]
         ctx.df = None
-        logging.info(f"SplitDataHandler: df was split into X and y.")
         return ctx
 
 class SplitClassificationDataHandler(Handler):
-    """
-    Handler for splitting the dataset into features and target (grade) for classification.
-    """
+    """Handler for splitting data for classification (grade target)."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"SplitClassificationDataHandler: Splitting data into features and target")
-        df = ctx.df.copy()
+        """
+        Split dataframe into features and target (grade).
 
-        # Drop salary if it exists, as it might be a target leakage or not available at inference?
-        # The prompt says "predict level... by salary, city, age...". So Salary IS a feature.
-        # So we keep salary_rub.
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context with features, target, and feature_names populated.
+        """
+        logging.info("SplitClassificationDataHandler: Splitting X/y")
+        df = ctx.df.copy()
         
-        target_col = 'grade'
-        if target_col not in df.columns:
+        if 'grade' not in df.columns:
             logging.error("Grade column not found!")
             return ctx
             
-        ctx.y = df[target_col].values
-        ctx.X = df.drop(columns=[target_col]).values # Convert to numpy array to match interface
-        
-        # We might want to keep feature names
-        ctx.feature_names = df.drop(columns=[target_col]).columns.tolist()
-
-        ctx.df = None # Clear df to save memory
-        logging.info(f"SplitClassificationDataHandler: df was split into X and y.")
+        ctx.target = df['grade'].values
+        ctx.features = df.drop(columns=['grade']).values
+        ctx.feature_names = df.drop(columns=['grade']).columns.tolist()
+        ctx.df = None
+        logging.info("SplitClassificationDataHandler: Done")
         return ctx

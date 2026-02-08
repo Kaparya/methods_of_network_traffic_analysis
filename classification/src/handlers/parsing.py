@@ -1,13 +1,22 @@
-import re
 import logging
+import re
+
 import pandas as pd
+
 from src.core import Handler, PipelineContext
 
 class ParseGenderAgeBirthdayHandler(Handler):
-    """
-    Handler for parsing gender, age, and birthday information from the "Пол, возраст" column.
-    """
+    """Handler for parsing gender, age, and birthday information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Parse 'Пол, возраст' column into separate gender, age, and birthday_month columns.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with parsed features.
+        """
         logging.info(f"ParseGenderAgeBirthdayHandler: Starting to parse gender, age and birthday month")
         df = ctx.df.copy()
         
@@ -59,10 +68,17 @@ class ParseGenderAgeBirthdayHandler(Handler):
         return ctx
 
 class ParseSalaryHandler(Handler):
-    """
-    Handler for parsing salary information from the "ЗП" column and converting it to rubles.
-    """
+    """Handler for parsing salary information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Parse 'ЗП' column and convert all salaries to rubles.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'salary_rub' column.
+        """
         logging.info(f"ParseSalaryHandler: Starting to parse salary")
         df = ctx.df.copy()
 
@@ -93,10 +109,17 @@ class ParseSalaryHandler(Handler):
         return ctx
 
 class ParseJobHandler(Handler):
-    """
-    Handler for parsing job information from the "Ищет работу на должность:" column.
-    """
+    """Handler for parsing job information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Normalize job titles to the top 133 most common ones, grouping others as 'other'.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with normalized 'job' column.
+        """
         logging.info(f"ParseJobHandler: Starting to parse job")
         df = ctx.df.copy()
 
@@ -115,10 +138,17 @@ class ParseJobHandler(Handler):
         return ctx
 
 class ParseCityHandler(Handler):
-    """
-    Handler for parsing city information from the "Город" column.
-    """
+    """Handler for parsing city information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Group cities into regions/federal districts.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'city' region column.
+        """
         logging.info(f"ParseCityHandler: Starting to parse city")
         df = ctx.df.copy()
 
@@ -186,10 +216,17 @@ class ParseCityHandler(Handler):
         return ctx
 
 class ParseEmploymentHandler(Handler):
-    """
-    Handler for parsing employment information from the "Занятость" column.
-    """
+    """Handler for parsing employment information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Parse 'Занятость' column into binary flags.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with employment flags.
+        """
         logging.info(f"ParseEmploymentHandler: Starting to parse employment")
         df = ctx.df.copy()
 
@@ -217,10 +254,17 @@ class ParseEmploymentHandler(Handler):
         return ctx
 
 class ParseWorkScheduleHandler(Handler):
-    """
-    Handler for parsing work schedule information from the "График" column.
-    """
+    """Handler for parsing work schedule information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Parse 'График' column into binary flags.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with schedule flags.
+        """
         logging.info(f"ParseWorkScheduleHandler: Starting to parse work schedule")
         df = ctx.df.copy()
 
@@ -248,141 +292,152 @@ class ParseWorkScheduleHandler(Handler):
         return ctx
 
 class ParseExperienceHandler(Handler):
-    """
-    Handler for parsing experience information from the "Опыт (двойное нажатие для полной версии)" column.
-    """
+    """Handler for parsing experience information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseExperienceHandler: Starting to parse experience")
+        """
+        Parse 'Опыт' string into total months.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'experience_months' column.
+        """
+        logging.info("ParseExperienceHandler: Parsing experience")
         df = ctx.df.copy()
 
-        def check_experience(value: str) -> int:
-            years_pattern = r'(\d+)\s*(?:год|года|лет)'
-            months_pattern = r'(\d+)\s*(?:месяц|месяца|месяцев)'
-            
-            experience_part = value.split('\n')[0]
-            
-            years = re.search(years_pattern, experience_part)
-            months = re.search(months_pattern, experience_part)
-            total_months = 0
-            if years:
-                total_months += int(years.group(1)) * 12
-            if months:
-                total_months += int(months.group(1))
-                
-            return total_months
+        def extract(value: str) -> int:
+            if not isinstance(value, str): 
+                return 0
+            years_match = re.search(r'(\d+)\s*(?:год|года|лет)', value)
+            months_match = re.search(r'(\d+)\s*(?:месяц|месяца|месяцев)', value)
+            total = 0
+            if years_match:
+                total += int(years_match.group(1)) * 12
+            if months_match:
+                total += int(months_match.group(1))
+            return total
         
-        df["experience_months"] = df["Опыт (двойное нажатие для полной версии)"].apply(check_experience)
-
-        df = df.drop(columns=["Опыт (двойное нажатие для полной версии)"])
-
-        ctx.df = df
-        logging.info(f"ParseExperienceHandler: Parsed experience")
+        df["experience_months"] = df["Опыт (двойное нажатие для полной версии)"].apply(extract)
+        ctx.df = df.drop(columns=["Опыт (двойное нажатие для полной версии)"])
+        logging.info("ParseExperienceHandler: Done")
         return ctx
 
 class ParseLastPlaceHandler(Handler):
-    """
-    Handler for parsing last place information from the "Последенее/нынешнее место работы" column.
-    """
+    """Handler for parsing last place information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseLastPlaceHandler: Starting to parse last place")
-        df = ctx.df.copy()
-        df = df.drop(columns=["Последенее/нынешнее место работы"])
-        ctx.df = df
-        logging.info(f"ParseLastPlaceHandler: Parsed last place")
+        """
+        Drop 'Последенее/нынешнее место работы' column.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context with the column removed.
+        """
+        logging.info("ParseLastPlaceHandler: Dropping column")
+        ctx.df = ctx.df.drop(columns=["Последенее/нынешнее место работы"])
         return ctx
 
 class ParseLastJobHandler(Handler):
-    """
-    Handler for parsing last job information from the "Последеняя/нынешняя должность" column.
-    """
+    """Handler for parsing last job information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseLastJobHandler: Starting to parse last job")
+        """
+        Normalize 'Последеняя/нынешняя должность' to top 133 or 'other'.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'last_job' column.
+        """
+        logging.info("ParseLastJobHandler: Parsing last job")
         df = ctx.df.copy()
-
-        jobs = df['job'].value_counts()
-
-        def extract_job(value: str) -> str:
-            if value in jobs:
-                return value
-            return "other"
-
-        df["last_job"] = df["Последеняя/нынешняя должность"].apply(extract_job)
-        df = df.drop(columns=["Последеняя/нынешняя должность"])
-
-        ctx.df = df
-        logging.info(f"ParseLastJobHandler: Parsed last job")
+        
+        # Note: ideally reuse top_jobs from ParseJobHandler
+        jobs = df['job'].value_counts().index if 'job' in df else []
+        
+        df["last_job"] = df["Последеняя/нынешняя должность"].apply(
+            lambda job_title: job_title if job_title in jobs else "other"
+        )
+        ctx.df = df.drop(columns=["Последеняя/нынешняя должность"])
+        logging.info("ParseLastJobHandler: Done")
         return ctx
 
 class ParseEducationHandler(Handler):
-    """
-    Handler for parsing education information from the "Образование и ВУЗ" column.
-    """
+    """Handler for parsing education information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseEducationHandler: Starting to parse education")
-        df = ctx.df.copy()
+        """
+        Parse 'Образование и ВУЗ' into binary education level flags.
 
-        education_map = {
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with education flags.
+        """
+        logging.info("ParseEducationHandler: Parsing education")
+        df = ctx.df.copy()
+        
+        mapping = {
             "incomplete_higher": ["неоконченное высшее", "incomplete higher"],
             "higher": ["высшее образование", "higher education"],
             "secondary_special": ["среднее специальное", "secondary special"],
             "secondary": ["среднее образование", "secondary education"]
         }
 
-        for column_name, keywords in education_map.items():
-            def extract_level(value: str) -> int:
-                value_lower = value.lower()
-                if any(keyword in value_lower for keyword in keywords):
-                    return 1
-                return 0
-            
-            df[f"edu_{column_name}"] = df["Образование и ВУЗ"].apply(extract_level)
+        for column_suffix, keywords in mapping.items():
+            df[f"edu_{column_suffix}"] = df["Образование и ВУЗ"].apply(
+                lambda education_string: 1 if any(keyword in education_string.lower() for keyword in keywords) else 0
+            )
 
-        df = df.drop(columns=["Образование и ВУЗ"])
-
-        ctx.df = df
-        logging.info(f"ParseEducationHandler: Parsed education")
+        ctx.df = df.drop(columns=["Образование и ВУЗ"])
+        logging.info("ParseEducationHandler: Done")
         return ctx
 
 class ParseResumeHandler(Handler):
-    """
-    Handler for parsing resume information from the "Обновление резюме" column.
-    """
+    """Handler for parsing resume information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseResumeHandler: Starting to parse resume")
+        """
+        Parse 'Обновление резюме' to create 'old_resume' flag.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'old_resume' flag.
+        """
+        logging.info("ParseResumeHandler: Parsing resume date")
         df = ctx.df.copy()
 
-        def extract_oldness(value: str) -> str:
+        def is_old(date_string: str) -> int:
             try:
-                year = int(value.split('.')[2].split(' ')[0])
-            except Exception as e:
-                logging.error(f"ParseResumeHandler: Error extracting oldness: {e}")
-                year = 0
-            return 0 if year > 2018 else 1
+                year = int(date_string.split('.')[2].split(' ')[0])
+                return 0 if year > 2018 else 1
+            except: return 0
 
-        df["old_resume"] = df["Обновление резюме"].apply(extract_oldness)
-        df = df.drop(columns=["Обновление резюме"])
-
-        ctx.df = df
-        logging.info(f"ParseResumeHandler: Parsed resume")
+        df["old_resume"] = df["Обновление резюме"].apply(is_old)
+        ctx.df = df.drop(columns=["Обновление резюме"])
+        logging.info("ParseResumeHandler: Done")
         return ctx
 
 class ParseAutoHandler(Handler):
-    """
-    Handler for parsing auto information from the "Авто" column.
-    """
+    """Handler for parsing auto information."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
-        logging.info(f"ParseAutoHandler: Starting to parse auto")
+        """
+        Parse 'Авто' to create 'auto' ownership flag.
+
+        Args:
+            ctx: Pipeline context containing the dataframe.
+
+        Returns:
+            PipelineContext: Context updated with 'auto' flag.
+        """
+        logging.info("ParseAutoHandler: Parsing auto")
         df = ctx.df.copy()
-
-        def extract_auto(value: str) -> str:
-            match value:
-                case 'Имеется собственный автомобиль': return 1
-                case 'Не указано': return 0
-                case _: return 0
-
-        df["auto"] = df["Авто"].apply(extract_auto)
-        df = df.drop(columns=["Авто"])
-
-        ctx.df = df
-        logging.info(f"ParseAutoHandler: Parsed auto")
+        df["auto"] = df["Авто"].apply(
+            lambda auto_status: 1 if auto_status == 'Имеется собственный автомобиль' else 0
+        )
+        ctx.df = df.drop(columns=["Авто"])
+        logging.info("ParseAutoHandler: Done")
         return ctx
