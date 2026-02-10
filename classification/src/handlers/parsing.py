@@ -320,7 +320,70 @@ class ParseExperienceHandler(Handler):
             return total
         
         df["experience_months"] = df["Опыт (двойное нажатие для полной версии)"].apply(extract)
+        ctx.df = df
         logging.info("ParseExperienceHandler: Done")
+        return ctx
+
+class ParseEperienceNLPHandler(Handler):
+    """Handler for NLP processing of experience description."""
+    def _process(self, ctx: PipelineContext) -> PipelineContext:
+        """
+        Extract TF-IDF features from experience description.
+        
+        Args:
+            ctx: Pipeline context containing the dataframe.
+            
+        Returns:
+            PipelineContext: Context updated with TF-IDF features.
+        """
+        logging.info("ParseDescriptionNLPHandler: Starting NLP processing")
+        df = ctx.df.copy()
+        
+        text_col = 'Опыт (двойное нажатие для полной версии)'
+            
+        if text_col not in df.columns:
+            logging.warning(f"ParseDescriptionNLPHandler: Column '{text_col}' not found. Skipping NLP.")
+            return ctx
+        
+        tfidf = TfidfVectorizer(
+            max_features=50,
+            ngram_range=(1, 2),
+            binary=True
+        )
+
+        def extract_text(value: str) -> int:
+            text = ''
+            try:
+                possible_strings = ['месяц', 'год', 'лет']
+                drop_index = -1
+                for current in possible_strings:
+                    drop_index = max(value.find(current) + len(current), drop_index)
+                if drop_index != -1:
+                    text = value[drop_index + 2:] # +2 accounts for skip double '\n\n'
+            except Exception as error:
+                logging.info(error)
+            return text
+        
+        texts = df[text_col].apply(extract_text).astype(str)
+        
+        try:
+            tfidf_matrix = tfidf.fit_transform(texts)
+            feature_names = [f"tfidf_{name}" for name in tfidf.get_feature_names_out()]
+            
+            tfidf_df = pd.DataFrame(
+                tfidf_matrix.toarray(), 
+                columns=feature_names, 
+                index=df.index
+            )
+            
+            df = pd.concat([df, tfidf_df], axis=1)
+            logging.info(f"ParseDescriptionNLPHandler: Added {len(feature_names)} TF-IDF features")
+            
+        except Exception as e:
+            logging.error(f"ParseDescriptionNLPHandler: NLP failed: {e}")
+            
+        df = df.drop(columns=[text_col])
+        ctx.df = df
         return ctx
 
 class ParseLastPlaceHandler(Handler):
@@ -440,72 +503,4 @@ class ParseAutoHandler(Handler):
         )
         ctx.df = df.drop(columns=["Авто"])
         logging.info("ParseAutoHandler: Done")
-        return ctx
-
-class ParseEperienceNLPHandler(Handler):
-    """Handler for NLP processing of experience description."""
-    def _process(self, ctx: PipelineContext) -> PipelineContext:
-        """
-        Extract TF-IDF features from experience description.
-        
-        Args:
-            ctx: Pipeline context containing the dataframe.
-            
-        Returns:
-            PipelineContext: Context updated with TF-IDF features.
-        """
-        logging.info("ParseDescriptionNLPHandler: Starting NLP processing")
-        df = ctx.df.copy()
-        
-        text_col = 'Опыт (двойное нажатие для полной версии)'
-            
-        if text_col not in df.columns:
-            logging.warning(f"ParseDescriptionNLPHandler: Column '{text_col}' not found. Skipping NLP.")
-            return ctx
-        
-        tfidf = TfidfVectorizer(
-            max_features=50,
-            ngram_range=(1, 2),
-            binary=True
-        )
-
-        def extract_text(value: str) -> int:
-            text = ''
-            try:
-                value_splitted = value.split('месяц')
-                if len(value_splitted) > 1:
-                    text = value_splitted[1]
-                    return text
-                value_splitted = value.split('год')
-                if len(value_splitted) > 1:
-                    text = value_splitted[1]
-                    return text
-                value_splitted = value.split('лет')
-                if len(value_splitted) > 1:
-                    text = value_splitted[1]
-                    return text
-            except Exception as error:
-                logging.info(error)
-            return text
-        
-        texts = df[text_col].apply(extract_text).astype(str)
-        
-        try:
-            tfidf_matrix = tfidf.fit_transform(texts)
-            feature_names = [f"tfidf_{name}" for name in tfidf.get_feature_names_out()]
-            
-            tfidf_df = pd.DataFrame(
-                tfidf_matrix.toarray(), 
-                columns=feature_names, 
-                index=df.index
-            )
-            
-            df = pd.concat([df, tfidf_df], axis=1)
-            logging.info(f"ParseDescriptionNLPHandler: Added {len(feature_names)} TF-IDF features")
-            
-        except Exception as e:
-            logging.error(f"ParseDescriptionNLPHandler: NLP failed: {e}")
-            
-        df = df.drop(columns=[text_col])
-        ctx.df = df
         return ctx
