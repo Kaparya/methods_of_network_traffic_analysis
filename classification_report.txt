@@ -3,28 +3,28 @@ Classification Report
 
               precision    recall  f1-score   support
 
-      Junior       0.52      0.61      0.56       734
-      Middle       0.51      0.61      0.56      1244
-      Senior       0.91      0.83      0.86      4059
+      Junior       0.96      0.77      0.86      5312
+      Middle       0.07      0.40      0.12        15
+      Senior       0.33      0.78      0.46       710
 
-    accuracy                           0.75      6037
-   macro avg       0.65      0.68      0.66      6037
-weighted avg       0.78      0.75      0.76      6037
+    accuracy                           0.77      6037
+   macro avg       0.45      0.65      0.48      6037
+weighted avg       0.89      0.77      0.81      6037
 
 
 Top 15 Features:
-age: 36.0778
-salary_rub: 17.6044
-birthday_month: 9.8385
-auto: 4.9753
-emp_internship: 3.0591
-city_Moscow & Oblast: 2.9324
-sch_shift: 2.4775
-sch_remote: 1.9500
-city_Other: 1.8809
-emp_project: 1.8055
-edu_higher: 1.6350
-emp_part_time: 1.5067
-city_Saint Petersburg & Oblast: 1.4978
-edu_incomplete_higher: 1.4124
-gender: 1.3785
+salary_rub: 21.3626
+age: 14.2176
+birthday_month: 7.2678
+tfidf_лет: 4.5211
+city_Moscow & Oblast: 3.9551
+tfidf_ев: 3.0160
+auto: 2.7964
+tfidf_2018: 2.3158
+tfidf_по: 2.0844
+tfidf_год: 1.8973
+tfidf_года: 1.8638
+city_South and North Caucasus Federal District: 1.4293
+sch_remote: 1.4163
+sch_flexible: 1.3812
+city_Other: 1.2296

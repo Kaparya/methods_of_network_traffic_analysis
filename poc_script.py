@@ -14,25 +14,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 from src.core import PipelineContext
-from src.handlers.filtering import FilterITRolesHandler
-from src.handlers.io import LoadCSVHandler
-from src.handlers.labeling import LabelGradeHandler
-from src.handlers.parsing import (
-    ParseAutoHandler,
-    ParseCityHandler,
-    ParseEducationHandler,
-    ParseEmploymentHandler,
-    ParseExperienceHandler,
-    ParseGenderAgeBirthdayHandler,
-    ParseLastPlaceHandler,
-    ParseResumeHandler,
-    ParseSalaryHandler,
-    ParseWorkScheduleHandler,
-)
-from src.handlers.preprocessing import (
-    EncodeCategoricalFeaturesHandler,
-    SplitClassificationDataHandler,
-)
+from src.pipeline import build_pipeline
+
+# Use Agg backend for headless environments
+matplotlib.use('Agg')
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -59,39 +44,6 @@ def _resolve_csv() -> Path:
             return candidate_path
     print("Error: hh.csv not found.")
     sys.exit(1)
-
-
-def _build_pipeline():
-    """
-    Build the data-processing pipeline for classification.
-
-    The pipeline follows a specific order:
-    1. Filter IT roles (optimization).
-    2. Parse raw features (age, salary, experience) needed for labeling.
-    3. Label grades and remove source columns (zero leakage).
-    4. Parse remaining features (city, schedule, etc.).
-    5. Encode categorical features.
-    6. Split into features and target.
-
-    Returns:
-        Handler: The head of the processing chain.
-    """
-    head = LoadCSVHandler()
-    head.set_next(FilterITRolesHandler()) \
-        .set_next(ParseGenderAgeBirthdayHandler()) \
-        .set_next(ParseSalaryHandler()) \
-        .set_next(ParseExperienceHandler()) \
-        .set_next(LabelGradeHandler()) \
-        .set_next(ParseCityHandler()) \
-        .set_next(ParseEmploymentHandler()) \
-        .set_next(ParseWorkScheduleHandler()) \
-        .set_next(ParseLastPlaceHandler()) \
-        .set_next(ParseEducationHandler()) \
-        .set_next(ParseResumeHandler()) \
-        .set_next(ParseAutoHandler()) \
-        .set_next(EncodeCategoricalFeaturesHandler()) \
-        .set_next(SplitClassificationDataHandler())
-    return head
 
 
 def _plot_class_balance(labels: np.ndarray, path: Path) -> None:
@@ -170,7 +122,7 @@ def main() -> None:
     """Main function to run the classification PoC."""
     # 1. Run the data pipeline.
     csv_path = _resolve_csv()
-    pipeline = _build_pipeline()
+    pipeline = build_pipeline()
 
     print(f"Starting pipeline (source: {csv_path}) ...")
     ctx = PipelineContext(csv_path=csv_path)
