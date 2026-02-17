@@ -23,13 +23,13 @@ class ParseGenderAgeBirthdayHandler(Handler):
         
         male_values = ['Мужчина', 'Male']
         
-        def extract_gender(value: str) -> str:
+        def extract_gender(value: str) -> int:
             raw_gender = value.split(',')[0].strip()
             if raw_gender in male_values:
                 return 0 # Male
             return 1 # Female
 
-        def extract_age(value: str) -> str:
+        def extract_age(value: str) -> int:
             data = value.split(',')
             if len(data) < 2:
                 return -1
@@ -37,7 +37,7 @@ class ParseGenderAgeBirthdayHandler(Handler):
             raw_age = raw_age.split(' ')[0]
             return int(raw_age)
 
-        def extract_birthday_month(value: str) -> str:
+        def extract_birthday_month(value: str) -> int:
             data = value.split(',')
             if len(data) < 3:
                 return -1
@@ -89,7 +89,7 @@ class ParseSalaryHandler(Handler):
             'KGS': 0.98, 'UAH': 2.5, 'BYN': 2.5, 'AZN': 41.1, 'som': 0.005,
         }
         
-        def extract_salary(value: str) -> str:
+        def extract_salary(value: str) -> int:
             value = value.replace('\xa0', ' ').strip().split(' ')
             number = ''
             currency = ''
