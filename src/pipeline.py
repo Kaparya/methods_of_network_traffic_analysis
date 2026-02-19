@@ -20,14 +20,14 @@ def build_pipeline() -> Handler:
         Handler: The first handler in the pipeline (LoadCSVHandler).
     """
     load = LoadCSVHandler()
-    filter = FilterITRolesHandler()
+    it_filter = FilterITRolesHandler()
     gender_age = ParseGenderAgeBirthdayHandler()
     salary = ParseSalaryHandler()
     city = ParseCityHandler()
     employment = ParseEmploymentHandler()
     work_schedule = ParseWorkScheduleHandler()
     experience = ParseExperienceHandler()
-    experienceNLP = ParseEperienceNLPHandler()
+    experience_nlp = ParseEperienceNLPHandler()
     grade = LabelGradeHandler()
     last_place = ParseLastPlaceHandler()
     education = ParseEducationHandler()
@@ -37,11 +37,11 @@ def build_pipeline() -> Handler:
 
     split_data = SplitClassificationDataHandler()
 
-    load.set_next(filter)\
+    load.set_next(it_filter)\
         .set_next(gender_age)\
         .set_next(salary)\
         .set_next(experience)\
-        .set_next(experienceNLP)\
+        .set_next(experience_nlp)\
         .set_next(grade)\
         .set_next(city)\
         .set_next(employment)\

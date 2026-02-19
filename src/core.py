@@ -21,7 +21,7 @@ logging.basicConfig(
 class PipelineContext:
     """Context for processing data pipeline."""
     csv_path: Path
-    df: Optional[pd.DataFrame] = None
+    dataframe: Optional[pd.DataFrame] = None
     features: Optional[np.ndarray] = None
     target: Optional[np.ndarray] = None
 

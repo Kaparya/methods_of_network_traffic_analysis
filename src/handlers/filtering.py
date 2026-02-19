@@ -68,8 +68,8 @@ class FilterITRolesHandler(Handler):
             PipelineContext: Context with filtered dataframe.
         """
         logging.info("FilterITRolesHandler: Filtering for IT roles")
-        df = ctx.df.copy()
-        initial_count = len(df)
+        dataframe = ctx.dataframe.copy()
+        initial_count = len(dataframe)
         col = 'Ищет работу на должность:'
 
         def is_it_role(value: str) -> bool:
@@ -88,8 +88,8 @@ class FilterITRolesHandler(Handler):
 
             return False
 
-        df = df[df[col].apply(is_it_role)]
+        dataframe = dataframe[dataframe[col].apply(is_it_role)]
         
-        logging.info(f"FilterITRolesHandler: {initial_count} -> {len(df)} rows ({len(df)/initial_count*100:.1f}%)")
-        ctx.df = df
+        logging.info(f"FilterITRolesHandler: {initial_count} -> {len(dataframe)} rows ({len(dataframe)/initial_count*100:.1f}%)")
+        ctx.dataframe = dataframe
         return ctx
