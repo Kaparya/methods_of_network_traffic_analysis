@@ -70,7 +70,6 @@ classification/
 
 1. Перейдите в папку проекта и запустите скрипт:
    ```bash
-   cd classification
    python3 poc_script.py
    ```
 
