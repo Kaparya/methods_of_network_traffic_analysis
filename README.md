@@ -6,7 +6,7 @@
 
 - **`main.py`**: Точка входа в приложение (CLI).
 - **`model.py`**: Логика обучения (CatBoostRegressor), оценки и сохранения модели.
-- **`data_loader.py`**: Загрузка датасетов `X.npy` и `y.npy`.
+- **`data_loader.py`**: Загрузка датасетов `features.npy` и `target.npy`.
 - **`inference.py`**: Функция для получения предсказаний на новых данных.
 - **`config.py`**: Конфигурация путей и логирования.
 
@@ -14,7 +14,7 @@
 
 Перед запуском убедитесь, что:
 1. Выполнен парсинг данных в модуле `parsing`.
-2. Файлы `X.npy` и `y.npy` находятся в папке `parsing/`.
+2. Файлы `features.npy` и `target.npy` находятся в папке `parsing/`.
 
 ## Использование
 
@@ -22,16 +22,17 @@
 Запускает процесс обучения, рассчитывает метрики (MAE, RMSE, R2) и сохраняет веса модели в `resources/salary_model.cbm`.
 
 ```bash
-python regression/main.py --train
+cd regression
+python main.py --train
 ```
 
 ### 2. Инференс (Предсказание)
 Принимает путь к файлу с признаками (`.npy`) и сохраняет предсказания в файл `y_pred.npy` в той же директории.
 
 ```bash
-python regression/main.py <path/to/X.npy>
+python main.py <path/to/features.npy>
 
-python regression/main.py ../parsing/X.npy
+python main.py ../parsing/features.npy
 ```
 
 ## Модель

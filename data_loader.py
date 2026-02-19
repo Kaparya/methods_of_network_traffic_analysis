@@ -7,13 +7,13 @@ def load_data():
     Load preprocessed dataset (features and target) from the parsing directory.
     
     Returns:
-        tuple containing the feature matrix (X) and target vector (y).
+        tuple containing the feature matrix (features) and target vector (target).
     """
     if not X_PATH.exists() or not Y_PATH.exists():
         raise FileNotFoundError(f"Files not found: {X_PATH} or {Y_PATH}. Please run parsing pipeline first.")
         
     logger.info("Loading data...")
-    X = np.load(X_PATH, allow_pickle=True)
-    y = np.load(Y_PATH, allow_pickle=True)
-    logger.info(f"Data loaded. X shape: {X.shape}, y shape: {y.shape}")
-    return X, y
+    features = np.load(X_PATH, allow_pickle=True)
+    target = np.load(Y_PATH, allow_pickle=True)
+    logger.info(f"Data loaded. features shape: {features.shape}, target shape: {target.shape}")
+    return features, target

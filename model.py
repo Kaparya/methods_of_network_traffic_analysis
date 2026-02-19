@@ -27,20 +27,20 @@ def evaluate_model(y_true, y_pred):
     
     return {"mae": mae, "rmse": np.sqrt(mse), "r2": r2}
 
-def train_model(X, y):
+def train_model(features, target):
     """
     Train a CatBoostRegressor model on the provided data.
     
     Splits data 80/20, trains the model, and evaluates on test set.
 
     Args:
-        X: Feature matrix.
-        y: Target vector.
+        features: Feature matrix.
+        target: Target vector.
 
     Returns:
         Trained CatBoostRegressor model.
     """
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=28)
+    X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=28)
     
     model = CatBoostRegressor(verbose=0, random_state=28)
     

@@ -8,7 +8,12 @@ from pathlib import Path
 import sys
 
 def parse_arguments():
-    """Parse CLI arguments for training or inference modes."""
+    """
+    Parse CLI arguments for training or inference modes.
+    
+    Returns:
+        argparse.Namespace: Parsed arguments.
+    """
     parser = argparse.ArgumentParser(description="Salary Prediction Model CLI")
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -34,9 +39,9 @@ def main():
     try:
         if args.train:
             logger.info("Starting training process...")
-            X, y = load_data()
+            features, target = load_data()
             
-            model = train_model(X, y)
+            model = train_model(features, target)
             save_model(model)
 
             logger.info("Training completed successfully.")            
