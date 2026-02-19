@@ -1,1 +1,10 @@
 hh.csv
+
+__pycache__/
+.venv/
+
+catboost_info/
+
+y_pred.npy
+
+.DS_Store
