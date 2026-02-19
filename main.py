@@ -1,7 +1,7 @@
-from config import logger
-from data_loader import load_data
-from inference import predict_and_save
-from model import evaluate_model, save_model, train_model
+from src.config import logger
+from src.data_loader import load_data
+from src.inference import predict_and_save
+from src.model import evaluate_model, save_model, train_model
 
 import argparse
 from pathlib import Path

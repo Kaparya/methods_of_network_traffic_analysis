@@ -5,10 +5,10 @@
 ## Структура проекта
 
 - **`main.py`**: Точка входа в приложение (CLI).
-- **`model.py`**: Логика обучения (CatBoostRegressor), оценки и сохранения модели.
-- **`data_loader.py`**: Загрузка датасетов `features.npy` и `target.npy`.
-- **`inference.py`**: Функция для получения предсказаний на новых данных.
-- **`config.py`**: Конфигурация путей и логирования.
+- **`src/model.py`**: Логика обучения (CatBoostRegressor), оценки и сохранения модели.
+- **`src/data_loader.py`**: Загрузка датасетов `features.npy` и `target.npy`.
+- **`src/inference.py`**: Функция для получения предсказаний на новых данных.
+- **`src/config.py`**: Конфигурация путей и логирования.
 
 ## Требования
 
@@ -22,7 +22,6 @@
 Запускает процесс обучения, рассчитывает метрики (MAE, RMSE, R2) и сохраняет веса модели в `resources/salary_model.cbm`.
 
 ```bash
-cd regression
 python main.py --train
 ```
 
@@ -32,7 +31,7 @@ python main.py --train
 ```bash
 python main.py <path/to/features.npy>
 
-python main.py ../parsing/features.npy
+python main.py parsing/features.npy
 ```
 
 ## Модель
