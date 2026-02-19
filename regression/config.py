@@ -9,8 +9,8 @@ RESOURCES_DIR = BASE_DIR.parent / "resources"
 MODEL_PATH = RESOURCES_DIR / "salary_model.cbm"
 
 # Данные для обучения
-X_PATH = PARSING_DIR / "X.npy"
-Y_PATH = PARSING_DIR / "y.npy"
+X_PATH = PARSING_DIR / "features.npy"
+Y_PATH = PARSING_DIR / "target.npy"
 
 def setup_logging():
     """

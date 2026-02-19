@@ -5,13 +5,13 @@ from pathlib import Path
 from catboost import CatBoostRegressor
 import numpy as np
 
-def predict_and_save(x_path_str: str, output_path_str: str = "y.npy") -> np.ndarray:
+def predict_and_save(x_path_str: str, output_path_str: str = "target.npy") -> np.ndarray:
     """
     Load model and perform inference on input data.
 
     Args:
         x_path_str: Path to input .npy file with features.
-        output_path_str: Path to save predictions (defaults to "y.npy").
+        output_path_str: Path to save predictions (defaults to "target.npy").
 
     Returns:
         Array of predicted values.
@@ -29,10 +29,10 @@ def predict_and_save(x_path_str: str, output_path_str: str = "y.npy") -> np.ndar
     if not x_path.exists():
         raise FileNotFoundError(f"Input file not found: {x_path}")
         
-    X_new = np.load(x_path, allow_pickle=True)
+    x_new = np.load(x_path, allow_pickle=True)
     
-    logger.info(f"Predicting for {X_new.shape[0]} samples...")
-    predictions = model.predict(X_new)
+    logger.info(f"Predicting for {x_new.shape[0]} samples...")
+    predictions = model.predict(x_new)
     
     np.save(output_path_str, predictions)
     logger.info(f"Predictions saved to {output_path_str}")

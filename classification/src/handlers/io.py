@@ -18,7 +18,7 @@ class LoadCSVHandler(Handler):
             PipelineContext: Context updated with the loaded DataFrame.
         """
         logging.info(f"LoadCSVHandler: Starting to load {ctx.csv_path}")
-        ctx.df = pd.read_csv(
+        ctx.dataframe = pd.read_csv(
             ctx.csv_path,
             sep=",",
             quotechar='"',
@@ -26,14 +26,14 @@ class LoadCSVHandler(Handler):
             encoding="utf-8",
             index_col=0
         )
-        logging.info(f"LoadCSVHandler: Loaded {ctx.csv_path} with {ctx.df.shape[0]} rows and {ctx.df.shape[1]} columns")
+        logging.info(f"LoadCSVHandler: Loaded {ctx.csv_path} with {ctx.dataframe.shape[0]} rows and {ctx.dataframe.shape[1]} columns")
         return ctx
 
 class SaveDataHandler(Handler):
-    """Handler for saving the dataset into X.npy and y.npy files."""
+    """Handler for saving the dataset into features.npy and target.npy files."""
     def _process(self, ctx: PipelineContext) -> PipelineContext:
         """
-        Save the processed features (X) and target (y) to NumPy files.
+        Save the processed features (features) and target (target) to NumPy files.
 
         Args:
             ctx: Pipeline context containing features and target arrays.
@@ -41,8 +41,8 @@ class SaveDataHandler(Handler):
         Returns:
             PipelineContext: Unmodified context.
         """
-        logging.info(f"SaveDataHandler: Saving data")
-        np.save("X.npy", ctx.features)
-        np.save("y.npy", ctx.target)
-        logging.info(f"SaveDataHandler: Data was saved to X.npy and y.npy files")
+        logging.info("SaveDataHandler: Saving data")
+        np.save("features.npy", ctx.features)
+        np.save("target.npy", ctx.target)
+        logging.info("SaveDataHandler: Data was saved to features.npy and target.npy files")
         return ctx

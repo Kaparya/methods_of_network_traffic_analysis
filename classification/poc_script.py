@@ -41,7 +41,7 @@ def main() -> None:
     feature_names: list[str] = getattr(
         ctx, 'feature_names', [f"feat_{i}" for i in range(features.shape[1])]
     )
-    logging.info(f"Data ready.  X shape: {features.shape},  y classes: {np.unique(target)}")
+    logging.info(f"Data ready.  features shape: {features.shape},  target classes: {np.unique(target)}")
 
     # 2. Class balance.
     unique, counts = np.unique(target, return_counts=True)

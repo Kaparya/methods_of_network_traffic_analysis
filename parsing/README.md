@@ -13,51 +13,47 @@
 ## Реализованные хэндлеры
 
 1. **LoadCSVHandler**: Загрузка данных, настройка кодировок и индексов.
-2. **ParseGenderAgeBirthdayHandler**: 
-   - Выделение пола (бинарный признак).
-   - Парсинг возраста.
-   - Извлечение месяца рождения (вся эта информация в одном столбце).
-3. **ParseSalaryHandler**: 
+2. **ParseGenderHandler**: Выделение пола (бинарный признак).
+3. **ParseAgeHandler**: Парсинг возраста.
+4. **ParseBirthdayMonthHandler**: Извлечение месяца рождения и удаление исходного столбца.
+5. **ParseSalaryHandler**: 
    - Извлечение числового значения зарплаты.
    - Конвертация различных валют (USD, EUR, KZT, грн. и др.) в рубли по фиксированному курсу.
-4. **ParseJobHandler**: 
+6. **ParseJobHandler**: 
    - Группировка редких профессий в категорию `other` на основе пороговых значений частоты.
-5. **ParseCityHandler**: 
+7. **ParseCityHandler**: 
    - Группировка 1100+ городов в крупные регионы (Moscow, SPb, Federal Districts, CIS) для уменьшения размерности.
-6. **ParseEmploymentHandler**: 
+8. **ParseEmploymentHandler**: 
    - Создание бинарных признаков для типов занятости (full-time, part-time, internship и др.).
-7. **ParseWorkScheduleHandler**: 
+9. **ParseWorkScheduleHandler**: 
    - Создание бинарных признаков для графиков работы (remote, flexible, shift и др.).
-8. **ParseExperienceHandler**: 
+10. **ParseExperienceHandler**: 
    - Конвертация текстового описания опыта (года, месяцы) в общее количество месяцев.
-9. **ParseLastPlaceHandler**:
+11. **ParseLastPlaceHandler**:
    - Удаление колонки с последним местом работы - возможно не несет достаточной пользы (может быть исправим позже).
-10. **ParseLastJobHandler**:
+12. **ParseLastJobHandler**:
     - Обработка последней должности, группировка редких значений.
-11. **ParseEducationHandler**: 
+13. **ParseEducationHandler**: 
    - Категоризация уровней образования (higher, incomplete higher, secondary) через бинарные флаги.
-12. **ParseResumeHandler**:
+14. **ParseResumeHandler**:
     - Классификация резюме на "старые" (более 1 года) и "новые".
-13. **ParseAutoHandler**:
+15. **ParseAutoHandler**:
     - Извлечение информации о наличии автомобиля.
-14. **EncodeCategoricalFeaturesHandler**:
+16. **EncodeCategoricalFeaturesHandler**:
     - Кодирование категориальных признаков методом One-Hot Encoding (`get_dummies`).
-15. **SplitDataHandler**:
-    - Разделение данных на матрицу признаков `X` и целевую переменную `y`.
-16. **SaveDataHandler**:
-    - Сохранение обработанных данных в форматы `X.npy` и `y.npy`.
+17. **SplitDataHandler**:
+    - Разделение данных на матрицу признаков `features` и целевую переменную `target`.
+18. **SaveDataHandler**:
+    - Сохранение обработанных данных в форматы `features.npy` и `target.npy`.
 
 ## Файловая структура
-- [pipeline.ipynb](pipeline.ipynb): Основной ноутбук с реализацией пайплайна.
-- [hh.csv](hh.csv): Исходный датасет (600MB+, исключен из git).
-- [tmp_files/](tmp_files/): Вспомогательные файлы со списками уникальных значений и частотным анализом для настройки хэндлеров.
-- [X.npy](X.npy): результат работы пайплайна (признаки)
-- [y.npy](y.npy): результат работы пайплайна (таргет)
+- `main.py`: Точка входа для запуска пайплайна.
+- `src/`: Директория с исходным кодом (хэндлеры, ядро, сборка пайплайна).
+- `hh.csv`: Исходный датасет (600MB+, исключен из git).
+- `features.npy`: Результат работы пайплайна (матрица признаков).
+- `target.npy`: Результат работы пайплайна (целевая переменная).
 
 ## Использование
 ```python
-# Пример запуска пайплайна
-pipeline = build_pipeline()
-ctx = PipelineContext(csv_path=Path("hh.csv"))
-ctx = pipeline.handle(ctx)
+python3 main.py
 ```
